@@ -1,7 +1,7 @@
 import utils.log_utils
 from version import Version
 
-LOG_FILE_PREFIX = "msg_server.log"
+LOG_FILE_PREFIX = "le_app.log"
 
 log = utils.log_utils.logging_init(__file__, LOG_FILE_PREFIX)
 
