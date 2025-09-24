@@ -1,6 +1,6 @@
 import utils.log_utils
 from version import Version
-from cmd_def import *
+from arglassescmd.cmd_def import *
 LOG_FILE_PREFIX = "le_app.log"
 
 log = utils.log_utils.logging_init(__file__, LOG_FILE_PREFIX)

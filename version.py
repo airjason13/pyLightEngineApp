@@ -3,7 +3,7 @@ Version_PN = "LE"
 Version_Year = '2025'
 Version_Month = '09'
 Version_Date = '24'
-Version_Major = "01"
+Version_Major = "02"
 Version_Minor = "00"
 Version_Patch = "00"
 
