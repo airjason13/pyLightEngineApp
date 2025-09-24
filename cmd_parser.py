@@ -1,8 +1,5 @@
 from global_def import *
-
-
 from PyQt5.QtCore import QObject, pyqtSignal
-
 from unix_client import UnixClient
 
 
@@ -42,5 +39,5 @@ class CmdParser(QObject):
         self.unix_data_ready_to_send.emit(reply)
 
     cmd_function_map = {
-        "le_get_sw_version": le_get_sw_version,
+        LE_GET_SW_VERSION: le_get_sw_version,
     }

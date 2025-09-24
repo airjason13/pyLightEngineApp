@@ -101,6 +101,7 @@ class AsyncWorker(QObject):
 
 
 def main():
+    log.debug(f"Welcome to {Version}")
     # 使用 QCoreApplication 取代 QApplication，不需要 GUI 子系統
     app = QCoreApplication(sys.argv)
     # 用 qasync 把 Qt 事件迴圈包裝成 asyncio 事件迴圈
