@@ -9,7 +9,7 @@ class CmdParser(QObject):
         super().__init__()
         self.msg_unix_client = msg_unix_client
 
-    def parse_cmds(self, data) -> str:
+    def parse_cmds(self, data):
         log.debug("data : %s", data)
 
         d = dict(item.split(':', 1) for item in data.split(';'))
@@ -22,9 +22,10 @@ class CmdParser(QObject):
         log.debug("%s", d)
 
         try:
-            if 'get' in d['cmd']:
+            self.cmd_function_map[d['cmd']](self, d)
+            '''if 'get' in d['cmd']:
                 log.debug("i : %s, v: %s", 'cmd', d['cmd'])
-                self.cmd_function_map[d['cmd']](self, d)
+                self.cmd_function_map[d['cmd']](self, d)'''
         except Exception as e:
             log.error(e)
 
@@ -38,6 +39,10 @@ class CmdParser(QObject):
         reply = ";".join(f"{k}:{v}" for k, v in data.items())
         self.unix_data_ready_to_send.emit(reply)
 
+    def le_set_test(self, data:dict):
+        log.debug("data : %s", data)
+
     cmd_function_map = {
         LE_GET_SW_VERSION: le_get_sw_version,
+        LE_SET_TEST: le_set_test,
     }
