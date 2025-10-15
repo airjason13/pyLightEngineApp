@@ -1,9 +1,9 @@
 """Software version"""
 Version_PN = "LE"
 Version_Year = '2025'
-Version_Month = '09'
-Version_Date = '30'
-Version_Major = "01"
+Version_Month = '10'
+Version_Date = '15'
+Version_Major = "02"
 Version_Minor = "00"
 Version_Patch = "00"
 

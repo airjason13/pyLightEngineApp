@@ -11,8 +11,7 @@ from global_def import *
 
 class AsyncWorker(QObject):
     """一個在獨立 Thread 中運行 asyncio 事件迴圈的類別"""
-    def __init__(self,async_loop,
-               unix_server_path=UNIX_LE_SERVER_URI):
+    def __init__(self, async_loop, unix_server_path=UNIX_LE_SERVER_URI):
         super().__init__()
         self.loop = async_loop
 
