@@ -41,6 +41,11 @@ class CmdParser(QObject):
     gpio_settings = gpiod.LineSettings()
     gpio_settings.direction=Direction.OUTPUT
 
+    # gpio_req = gpio_chip.request_lines(
+    #     config={gpio_offset: gpio_settings},
+    #     consumer="JBD_N2V"
+    # )
+
     def __init__(self, msg_unix_client:UnixClient):
         super().__init__()
         self.msg_unix_client = msg_unix_client
@@ -268,8 +273,6 @@ class CmdParser(QObject):
     def parse_cmds(self, data) -> None:
         log.debug("data : %s", data)
 
-        # d = dict(item.split(':', 1) for item in data.split(';'))
-
         d = {}
         for item in data.split(';'):
             item = item.strip()
@@ -291,7 +294,7 @@ class CmdParser(QObject):
         log.debug("parsed dict: %s", d)
 
         # CC: check if cmd is defined
-        cmd = d.get('cmd')
+        cmd:str = d.get('cmd')
         handler = self.cmd_function_map.get(cmd, self.cmd_unknown)
 
         log.debug("cmd: %s", cmd)
@@ -346,6 +349,7 @@ class CmdParser(QObject):
                 key, val = line.split(':', 1)
                 key, val = key.strip(), val.strip()
                 d[key] = int(val)
+
         result = ",".join(f"{k}={v}" for k, v in d.items())
         data['src'], data['dst'] = data['dst'], data['src']
         data['data'] = result
@@ -367,6 +371,7 @@ class CmdParser(QObject):
                 key, val = line.split(':', 1)
                 key, val = key.strip(), val.strip()
                 d[key] = int(val)
+
         result = ",".join(f"{k}={v}" for k, v in d.items())
         data['src'], data['dst'] = data['dst'], data['src']
         data['data'] = result
@@ -441,7 +446,9 @@ class CmdParser(QObject):
         self.unix_data_ready_to_send.emit(reply)
 
     def le_set_brightness(self, data:dict):
+        error_flag = 0
         settings = {}
+
         for item in data['data'].split(','):
             item = item.strip()
             if not item:
@@ -451,24 +458,32 @@ class CmdParser(QObject):
                 key, val = key.strip(), val.strip()
                 settings[key] = val
 
-        for key, val in settings.items():
-            s = f"{key} {val}"
-            self.sysfs_luminance.write_text(s)
-            if key.lower() == "r":
-                self.path_lumin_r.write_text(f"{val}")
-            if key.lower() == "g":
-                self.path_lumin_g.write_text(f"{val}")
-            if key.lower() == "b":
-                self.path_lumin_b.write_text(f"{val}")
+        if not settings:
+            error_flag = 1
+        else:
+            for key, val in settings.items():
+                s = f"{key} {val}"
+                self.sysfs_luminance.write_text(s)
+                if key.lower() == "r":
+                    self.path_lumin_r.write_text(f"{val}")
+                if key.lower() == "g":
+                    self.path_lumin_g.write_text(f"{val}")
+                if key.lower() == "b":
+                    self.path_lumin_b.write_text(f"{val}")
 
         data['src'], data['dst'] = data['dst'], data['src']
         # Dict to Str
         reply = ";".join(f"{k}:{v}" for k, v in data.items())
-        reply += ";OK"
+        if error_flag == 0:
+            reply += ";OK"
+        else:
+            reply += ";NG"
         self.unix_data_ready_to_send.emit(reply)
 
     def le_set_current(self, data:dict):
+        error_flag = 0
         settings = {}
+
         for item in data['data'].split(','):
             item = item.strip()
             if not item:
@@ -478,64 +493,88 @@ class CmdParser(QObject):
                 key, val = key.strip(), val.strip()
                 settings[key] = val
 
-        for key, val in settings.items():
-            s = f"{key} {val}"
-            try:
-                self.sysfs_current.write_text(s)
-            except Exception as e:
-                print(f"Error: {e}")
-            if key.lower() == "r":
-                self.path_current_r.write_text(f"{val}")
-            if key.lower() == "g":
-                self.path_current_g.write_text(f"{val}")
-            if key.lower() == "b":
-                self.path_current_b.write_text(f"{val}")
+        if not settings:
+            error_flag = 1
+        else:
+            for key, val in settings.items():
+                s = f"{key} {val}"
+                try:
+                    self.sysfs_current.write_text(s)
+                except Exception as e:
+                    print(f"Error: {e}")
+                if key.lower() == "r":
+                    self.path_current_r.write_text(f"{val}")
+                if key.lower() == "g":
+                    self.path_current_g.write_text(f"{val}")
+                if key.lower() == "b":
+                    self.path_current_b.write_text(f"{val}")
 
         data['src'], data['dst'] = data['dst'], data['src']
         # Dict to Str
         reply = ";".join(f"{k}:{v}" for k, v in data.items())
-        reply += ";OK"
+        if error_flag == 0:
+            reply += ";OK"
+        else:
+            reply += ";NG"
         self.unix_data_ready_to_send.emit(reply)
 
     def le_set_mirror(self, data:dict):
+        error_flag = 0
+
         if '1' == data['data'].strip():
             set = "r 1"
             self.path_mirror.write_text("1")
-        else:
+        elif '0' == data['data'].strip():
             set = "r 0"
             self.path_mirror.write_text("0")
+        else:
+            error_flag = 1
 
-        try:
-            self.sysfs_mirror.write_text(set)
-        except Exception as e:
-            print(f"Error: {e}")
+        if error_flag == 0:
+            try:
+                self.sysfs_mirror.write_text(set)
+            except Exception as e:
+                print(f"Error: {e}")
+                error_flag = 1
 
         data['src'], data['dst'] = data['dst'], data['src']
         # Dict to Str
         reply = ";".join(f"{k}:{v}" for k, v in data.items())
-        reply += ";OK"
+        if error_flag == 0:
+            reply += ";OK"
+        else:
+            reply += ";NG"
         self.unix_data_ready_to_send.emit(reply)
 
     def le_set_flip(self, data:dict):
+        error_flag = 0
+
         if '1' == data['data'].strip():
             set = "r 1"
             self.path_flip.write_text("1")
-        else:
+        elif '0' == data['data'].strip():
             set = "r 0"
             self.path_flip.write_text("0")
+        else:
+            error_flag = 1
 
-        try:
-            self.sysfs_flip.write_text(set)
-        except Exception as e:
-            print(f"Error: {e}")
+        if error_flag == 0:
+            try:
+                self.sysfs_flip.write_text(set)
+            except Exception as e:
+                print(f"Error: {e}")
 
         data['src'], data['dst'] = data['dst'], data['src']
         # Dict to Str
         reply = ";".join(f"{k}:{v}" for k, v in data.items())
-        reply += ";OK"
+        if error_flag == 0:
+            reply += ";OK"
+        else:
+            reply += ";NG"
         self.unix_data_ready_to_send.emit(reply)
 
     def le_set_offset(self, data:dict):
+        error_flag = 0
         settings = data['data'].lower()
 
         try:
@@ -543,23 +582,28 @@ class CmdParser(QObject):
         except ValueError as e:
             print(f"split error: {e}")
             result = {}
+            error_flag = 1
 
-        if all(result.get(k) for k in ('re', 'rh', 'rv')):
-            self.sysfs_offset.write_text(f"r {result['re']} {result['rh']} {result['rv']}")
-            self.path_offset_r.write_text(f"{result['re']},{result['rh']},{result['rv']}")
+        if error_flag == 0:
+            if all(result.get(k) for k in ('re', 'rh', 'rv')):
+                self.sysfs_offset.write_text(f"r {result['re']} {result['rh']} {result['rv']}")
+                self.path_offset_r.write_text(f"{result['re']},{result['rh']},{result['rv']}")
 
-        if all(result.get(k) for k in ('ge', 'gh', 'gv')):
-            self.sysfs_offset.write_text(f"g {result['ge']} {result['gh']} {result['gv']}")
-            self.path_offset_g.write_text(f"{result['ge']},{result['gh']},{result['gv']}")
+            if all(result.get(k) for k in ('ge', 'gh', 'gv')):
+                self.sysfs_offset.write_text(f"g {result['ge']} {result['gh']} {result['gv']}")
+                self.path_offset_g.write_text(f"{result['ge']},{result['gh']},{result['gv']}")
 
-        if all(result.get(k) for k in ('be', 'bh', 'bv')):
-            self.sysfs_offset.write_text(f"b {result['be']} {result['bh']} {result['bv']}")
-            self.path_offset_b.write_text(f"{result['be']},{result['bh']},{result['bv']}")
+            if all(result.get(k) for k in ('be', 'bh', 'bv')):
+                self.sysfs_offset.write_text(f"b {result['be']} {result['bh']} {result['bv']}")
+                self.path_offset_b.write_text(f"{result['be']},{result['bh']},{result['bv']}")
 
         data['src'], data['dst'] = data['dst'], data['src']
         # Dict to Str
         reply = ";".join(f"{k}:{v}" for k, v in data.items())
-        reply += ";OK"
+        if error_flag == 0:
+            reply += ";OK"
+        else:
+            reply += ";NG"
         self.unix_data_ready_to_send.emit(reply)
 
     cmd_function_map = {
