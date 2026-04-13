@@ -2,6 +2,8 @@ import asyncio
 import signal
 import sys
 import threading
+
+from light_engine_hal import LightEngineController
 from unix_server import UnixServer
 from unix_client import UnixClient
 from cmd_parser import CmdParser
@@ -13,6 +15,8 @@ class AsyncWorker(QObject):
     """一個在獨立 Thread 中運行 asyncio 事件迴圈的類別"""
     def __init__(self, async_loop, unix_server_path=UNIX_LE_SERVER_URI):
         super().__init__()
+        self.le_controller = None
+
         self.loop = async_loop
 
         self.unix_server_path = unix_server_path
@@ -45,7 +49,11 @@ class AsyncWorker(QObject):
         self.msg_app_unix_client = UnixClient(UNIX_MSG_SERVER_URI)
         self.unix_server = UnixServer(self.msg_app_unix_client, self.unix_server_path)
         self.unix_server.unix_data_received.connect(self.unix_data_recv_handler)
-        self.cmd_parser = CmdParser(self.msg_app_unix_client)
+        self.le_controller = LightEngineController()
+        self.msg_app_unix_client = UnixClient(UNIX_MSG_SERVER_URI)
+        self.unix_server = UnixServer(self.msg_app_unix_client, self.unix_server_path)
+        self.cmd_parser = CmdParser(self.msg_app_unix_client, self.le_controller)
+
         self.cmd_parser.unix_data_ready_to_send.connect(self.send_to_msg_server)
         await self.unix_server.start()
         await self.msg_app_unix_client.connect()
