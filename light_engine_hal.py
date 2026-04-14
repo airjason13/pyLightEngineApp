@@ -365,7 +365,7 @@ class LightEngineController(QObject):
 
         temps = self.get_temperature()
         if not temps:
-            log.debug("get temp fail")
+            # log.debug("get temp fail")
             return
 
         try:

@@ -44,19 +44,22 @@ class AsyncWorker(QObject):
         self._periodic_unix_msg(send_data.encode())
 
     async def start_all_server_client(self):
-        log.debug("")
 
-        self.msg_app_unix_client = UnixClient(UNIX_MSG_SERVER_URI)
-        self.unix_server = UnixServer(self.msg_app_unix_client, self.unix_server_path)
-        self.unix_server.unix_data_received.connect(self.unix_data_recv_handler)
+        log.debug("start_all_server_client")
+
         self.le_controller = LightEngineController()
         self.msg_app_unix_client = UnixClient(UNIX_MSG_SERVER_URI)
         self.unix_server = UnixServer(self.msg_app_unix_client, self.unix_server_path)
-        self.cmd_parser = CmdParser(self.msg_app_unix_client, self.le_controller)
 
+        self.unix_server.unix_data_received.connect(self.unix_data_recv_handler)
+
+        self.cmd_parser = CmdParser(self.msg_app_unix_client, self.le_controller)
         self.cmd_parser.unix_data_ready_to_send.connect(self.send_to_msg_server)
+
         await self.unix_server.start()
         await self.msg_app_unix_client.connect()
+
+        log.debug("unix server/client started")
 
         ''''# === 測試用 新增：每 5 秒觸發一次 test_send_unix_msg ===
         self.timer = QTimer(self)
