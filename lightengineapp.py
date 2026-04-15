@@ -49,10 +49,8 @@ class AsyncWorker(QObject):
 
         self.le_controller = LightEngineController()
         self.msg_app_unix_client = UnixClient(UNIX_MSG_SERVER_URI)
-        self.unix_server = UnixServer(self.msg_app_unix_client, self.unix_server_path)
-
+        self.unix_server = UnixServer(self.unix_server_path)
         self.unix_server.unix_data_received.connect(self.unix_data_recv_handler)
-
         self.cmd_parser = CmdParser(self.msg_app_unix_client, self.le_controller)
         self.cmd_parser.unix_data_ready_to_send.connect(self.send_to_msg_server)
 
