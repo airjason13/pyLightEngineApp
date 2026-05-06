@@ -134,8 +134,10 @@ class LightEngineController(QObject):
         """
         try:
             if not path.exists():
+                log.warning(f"[LE] write skipped, path not exists: {path}")
                 return False
             path.write_text(text)
+            # log.debug(f"[LE] write OK: {path}")
             return True
         except Exception as e:
             log.warning(f"[LE] write failed {path}: {e}")
@@ -227,22 +229,33 @@ class LightEngineController(QObject):
     def get_offset(self) -> dict:
         """
         parse:
-            R(enabled)H: 12, V:34
-        -> { "RE":"1", "RH":"12","RV":"34", ... }
+            R(enabled) H:3, V:1
+        -> { "re":"1", "rh":"3","rv":"1", ... }
         """
+
         text = self._safe_read(self.sysfs_offset)
         offset = {}
-        pattern = re.compile(r"([RGB])\((enabled|disabled)\)H:\s*(\d+),\s*V:(\d+)")
+
+        pattern = re.compile(
+            r"([RGB])\((enabled|disabled)\)\s*H:\s*(\d+),\s*V:(\d+)"
+        )
+
         for line in text.splitlines():
+            log.debug(f"offset raw line = [{line}]")
+
             m = pattern.match(line.strip())
             if not m:
                 continue
-            color, en, h, v = m.groups()
-            offset[f"{color}E"] = "1" if en == "enabled" else "0"
-            offset[f"{color}H"] = h
-            offset[f"{color}V"] = v
-        return offset
 
+            color, en, h, v = m.groups()
+
+            color = color.lower()
+
+            offset[f"{color}e"] = "1" if en == "enabled" else "0"
+            offset[f"{color}h"] = h
+            offset[f"{color}v"] = v
+
+        return offset
     def _parse_key_value_lines(self, text: str, cast_int: bool) -> dict:
         d = {}
         for line in text.splitlines():
@@ -337,6 +350,9 @@ class LightEngineController(QObject):
         # h/v must be valid numbers
         if not h.isdigit() or not v.isdigit():
             return False
+
+        log.debug(f"[LE] set_offset ch={ch}, en={en}, h={h}, v={v}")
+        log.debug(f"[LE] sysfs_offset exists={self.sysfs_offset.exists()}, path={self.sysfs_offset}")
 
         # write to hardware
         ok = self._safe_write(self.sysfs_offset, f"{ch} {en} {h} {v}")
