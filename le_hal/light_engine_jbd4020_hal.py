@@ -6,7 +6,7 @@ from gpiod.line import Direction, Value
 
 from global_def import *
 
-class LightEngineController(QObject):
+class LightEngineJBD4020Controller(QObject):
     """
     Hardware layer:
     - sysfs read/write

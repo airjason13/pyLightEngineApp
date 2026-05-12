@@ -14,6 +14,7 @@ class CmdParser(QObject):
         # self.le.temp_event.connect(self._on_temp_event)
 
     def cmd_unknown(self, data:dict):
+        log.debug(f"unknown cmd: {data}")
         pass
 
     def parse_cmds(self, data) -> None:
