@@ -233,19 +233,18 @@ class LightEngineJBD4040Controller(QObject):
         return wrote_any
 
     def set_flip(self, enable: int) -> bool:
-        log.debug(f"set_flip called")
+        log.debug(f"set_flip called with enable = {enable}")
         if not self.sysfs_flip.exists():
             return False
-        v = "1" if str(enable).strip() == "1" else "0"
-        return _safe_write(self.sysfs_flip, f"r {v}")
+        v = "Flip is Enabled" if str(enable).strip() == "1" else "Flip is Disabled"
+        return _safe_write(self.sysfs_flip, f"{v}")
 
     def set_mirror(self, enable: int) -> bool:
-        log.debug(f"set_mirror called")
+        log.debug(f"set_mirror called with enable = {enable}")
         if not self.sysfs_mirror.exists():
             return False
-        v = "1" if str(enable).strip() == "1" else "0"
-
-        return _safe_write(self.sysfs_mirror, f"r {v}")
+        v = "Mirror is Enabled" if str(enable).strip() == "1" else "Mirror is Disabled"
+        return _safe_write(self.sysfs_flip, f"{v}")
 
     def set_offset(self, ch: str, en: str, h: str, v: str) -> bool:
         log.debug(f"set_offset called")
