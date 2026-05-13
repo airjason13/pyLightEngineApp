@@ -110,7 +110,9 @@ class CmdParser(QObject):
         self.unix_data_ready_to_send.emit(reply)
 
     def le_get_offset(self, data: dict):
+        log.debug(f"data : {data}")
         vals = self.le.get_offset()
+        log.debug(f"vals : {vals}")
         payload = ",".join(f"{k}={v}" for k, v in vals.items())
 
         data['src'], data['dst'] = data['dst'], data['src']
@@ -144,6 +146,7 @@ class CmdParser(QObject):
         self.unix_data_ready_to_send.emit(reply)
 
     def le_set_current(self, data: dict):
+        log.debug(f"data : {data}")
         raw = data.get("data", "")
 
         r = g = b = None

@@ -53,6 +53,56 @@ def _safe_write(path: Path, text: str) -> bool:
         return False
 
 
+def update_offset_file(file_path, channel, enabled, h_val, v_val)-> bool:
+    """
+    更新 offset 檔案內容。
+    :param file_path: 檔案路徑 (例如 'offset')
+    :param channel: 字串 'r', 'g', 或 'b'
+    :param enabled: 整數 0 (disable) 或 1 (enabled)
+    :param h_val: 新的 H 數值
+    :param v_val: 新的 V 數值
+    """
+    # 將參數轉為顯示字串
+    log.debug(f"enabled: {enabled}")
+    log.debug(f"type(enabled): {type(enabled)}")
+    status_str = "enabled" if enabled == '1' else "disabled"
+    log.debug(f"status_str: {status_str}")
+    target_channel = channel.upper()  # 轉為大寫匹配 R, G, B
+
+    if not os.path.exists(file_path):
+        print(f"Error: File {file_path} not found.")
+        return False
+
+    # 讀取原始內容
+    with open(file_path, 'r') as f:
+        lines = f.readlines()
+
+    new_lines = []
+    # 定義正則表達式，用來匹配該通道的那一行
+    # 格式：R(xxxx) H:yy, V:zz
+    pattern = re.compile(rf"^{target_channel}\(.*\)\s+H:\d+,\s+V:\d+")
+
+    found = False
+    for line in lines:
+        if pattern.match(line.strip()):
+            # 構建新的內容行
+            new_line = f"{target_channel}({status_str}) H:{h_val}, V:{v_val}\n"
+            new_lines.append(new_line)
+            found = True
+        else:
+            new_lines.append(line)
+
+    if not found:
+        print(f"Warning: Channel {target_channel} not found in file.")
+        return False
+
+    # 寫回檔案
+    with open(file_path, 'w') as f:
+        f.writelines(new_lines)
+
+    print(f"Successfully updated {target_channel} to {status_str} H:{h_val}, V:{v_val}")
+    return True
+
 class LightEngineJBD4040Controller(QObject):
     """
     Hardware layer:
@@ -87,15 +137,6 @@ class LightEngineJBD4040Controller(QObject):
 
         log.debug(f"{LightEngineJBD4040Controller} init done")
 
-    def _safe_read(self, path: Path) -> str:
-        try:
-            ret_str = path.read_text().strip()
-            log.debug(f"{path} read {ret_str}")
-            return ret_str
-        except Exception as e:
-            log.warning(f"[LE] read failed {path}: {e}")
-            return ""
-
     # -------------------------
     # Public API: GET
     # -------------------------
@@ -105,7 +146,7 @@ class LightEngineJBD4040Controller(QObject):
         return dict: {"R": "...", "G": "...", "B": "..."} (string or int ok)
         """
         log.debug(f"sysfs_luminance : {self.sysfs_luminance}")
-        text = self._safe_read(self.sysfs_luminance)
+        text = _safe_read(self.sysfs_luminance)
         log.debug(f"luminance : {text}")
         return _parse_key_value_lines(text, cast_int=False)
 
@@ -138,10 +179,11 @@ class LightEngineJBD4040Controller(QObject):
         """
 
         text = _safe_read(self.sysfs_offset)
+        log.debug(f"offset : {text}")
         offset = {}
 
         pattern = re.compile(
-            r"([RGB])\((enabled|disabled)\)\s*H:\s*(\d+),\s*V:(\d+)"
+            r"([RGB])\((enable|disable|enabled|disabled)\)\s*H:\s*(\d+),?\s*V:\s*(\d+)"
         )
 
         for line in text.splitlines():
@@ -159,6 +201,7 @@ class LightEngineJBD4040Controller(QObject):
             offset[f"{color}h"] = h
             offset[f"{color}v"] = v
 
+        log.debug(f"offset : {offset}")
         return offset
 
     # -------------------------
@@ -194,10 +237,6 @@ class LightEngineJBD4040Controller(QObject):
         if not self.sysfs_flip.exists():
             return False
         v = "1" if str(enable).strip() == "1" else "0"
-        try:
-            self.path_flip.write_text(v)
-        except Exception:
-            pass
         return _safe_write(self.sysfs_flip, f"r {v}")
 
     def set_mirror(self, enable: int) -> bool:
@@ -205,10 +244,7 @@ class LightEngineJBD4040Controller(QObject):
         if not self.sysfs_mirror.exists():
             return False
         v = "1" if str(enable).strip() == "1" else "0"
-        try:
-            self.path_mirror.write_text(v)
-        except Exception:
-            pass
+
         return _safe_write(self.sysfs_mirror, f"r {v}")
 
     def set_offset(self, ch: str, en: str, h: str, v: str) -> bool:
@@ -218,7 +254,6 @@ class LightEngineJBD4040Controller(QObject):
         en: '0'/'1'
         h,v: int string
         """
-
         # normalize input
         ch = ch.lower().strip()
 
@@ -242,20 +277,7 @@ class LightEngineJBD4040Controller(QObject):
         log.debug(f"[LE] set_offset ch={ch}, en={en}, h={h}, v={v}")
         log.debug(f"[LE] sysfs_offset exists={self.sysfs_offset.exists()}, path={self.sysfs_offset}")
 
-        # write to hardware
-        ok = _safe_write(self.sysfs_offset, f"{ch} {en} {h} {v}")
-
-        # only persist if hardware write succeeded
-        if ok:
-            persist = {
-                "r": self.path_offset_r,
-                "g": self.path_offset_g,
-                "b": self.path_offset_b
-            }[ch]
-
-            try:
-                persist.write_text(f"{en},{h},{v}")
-            except Exception:
-                pass
+        # ok = _safe_write(self.sysfs_offset, f"{ch} {en} {h} {v}")
+        ok = update_offset_file(self.sysfs_offset, ch, en, h, v)
 
         return ok
