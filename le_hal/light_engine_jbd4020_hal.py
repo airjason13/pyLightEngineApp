@@ -1,3 +1,5 @@
+import logging
+
 from PyQt5.QtCore import QObject, QTimer, pyqtSignal
 from pathlib import Path
 import re
@@ -70,7 +72,7 @@ class LightEngineJBD4020Controller(QObject):
         self.gpio_offset = int(n2v_gpio_offset)
         self.gpio_settings = None
         self.gpiochip_path = gpiochip
-
+        log.debug("ready to init_gpio")
         self._init_gpio()
 
         # restore persisted states (do NOT crash if sysfs missing)
@@ -82,6 +84,7 @@ class LightEngineJBD4020Controller(QObject):
         self.timer.timeout.connect(self.temperature_tick)
         if enable_timer:
             QTimer.singleShot(0, self.timer.start)
+        log.debug("Initialization complete")
 
     # -------------------------
     # GPIO
@@ -207,14 +210,17 @@ class LightEngineJBD4020Controller(QObject):
         """
         return dict: {"R": "...", "G": "...", "B": "..."} (string or int ok)
         """
+        log.debug("Le get_brightness")
         text = self._safe_read(self.sysfs_luminance)
         return self._parse_key_value_lines(text, cast_int=False)
 
     def get_current(self) -> dict:
+        log.debug("Le get_current")
         text = self._safe_read(self.sysfs_current)
         return self._parse_key_value_lines(text, cast_int=True)
 
     def get_temperature(self) -> dict:
+        # log.debug("Le get_temperature")
         text = self._safe_read(self.sysfs_temperature)
         return self._parse_key_value_lines(text, cast_int=True)
 
