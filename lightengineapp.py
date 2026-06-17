@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 from le_hal.light_engine_jbd4020_hal import LightEngineJBD4020Controller
+from le_hal.light_engine_jbd4040_hal import LightEngineJBD4040Controller
 from unix_server import UnixServer
 from unix_client import UnixClient
 from cmd_parser import CmdParser
@@ -50,9 +51,13 @@ class AsyncWorker(QObject):
             self.le_controller = LightEngineJBD4020Controller()
         else:
             if Path("/dev/jbd4020").exists():
+                log.debug(f"jbd4020 is ready for working")
                 self.le_controller = LightEngineJBD4020Controller()
+            elif Path("/dev/jbd4040").exists():
+                log.debug(f"jbd4040 is ready for working")
+                self.le_controller = LightEngineJBD4040Controller()
             else:
-                self.le_controller = LightEngineJBD4020Controller(i2c_dev_path="/sys/bus/i2c/devices/0-0058")
+                log.error("No Optical Engine!")
         self.msg_app_unix_client = UnixClient(UNIX_MSG_SERVER_URI)
         self.unix_server = UnixServer(self.unix_server_path)
         self.unix_server.unix_data_received.connect(self.unix_data_recv_handler)
